@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import request from "supertest";
 import app from "../../src/app";
 import { DataSource } from "typeorm";
@@ -72,6 +73,20 @@ describe("POST /auth/register", () => {
             expect(users[0].firstName).toBe(userData.firstName);
             expect(users[0].lastName).toBe(userData.lastName);
             expect(users[0].email).toBe(userData.email);
+        });
+        it("should return an id of the created user", async () => {
+            const userData = {
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
+            };
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+            expect(response.statusCode).toBe(201);
+            expect(response.body).toHaveProperty("id");
+            expect(typeof response.body.id).toBe("string");
         });
     });
     describe("Fields are missing", () => {});
