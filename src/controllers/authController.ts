@@ -2,6 +2,7 @@ import { NextFunction, Response } from "express";
 import { RequestWithUser } from "../types";
 import { UserService } from "../services/UserService";
 import { Logger } from "winston";
+import { validationResult } from "express-validator";
 
 export class AuthController {
     constructor(
@@ -10,20 +11,19 @@ export class AuthController {
     ) {}
 
     async register(req: RequestWithUser, res: Response, next: NextFunction) {
-        try {
-            const { firstName, lastName, email, password } = req.body;
-            this.logger.debug("New ewquest to register a user", {
-                firstName,
-                lastName,
-                email,
-                password: "********",
-            });
-            if (!firstName || !lastName || !email || !password) {
-                return res
-                    .status(400)
-                    .json({ message: "All fields are required" });
-            }
+        const result = validationResult(req);
+        if (!result.isEmpty()) {
+            return res.status(400).json({ errors: result.array() });
+        }
+        const { firstName, lastName, email, password } = req.body;
 
+        this.logger.debug("New ewquest to register a user", {
+            firstName,
+            lastName,
+            email,
+            password: "********",
+        });
+        try {
             const user = await this.userService.create({
                 firstName,
                 lastName,
