@@ -1,17 +1,18 @@
 import { NextFunction, Response } from "express";
 import { RequestWithUser } from "../types";
 import { UserService } from "../services/UserService";
-import path from "path";
-import fs from "fs";
 import { Logger } from "winston";
 import { validationResult } from "express-validator";
-import { JwtPayload, sign } from "jsonwebtoken";
-import createHttpError from "http-errors";
-import { Config } from "../config";
+import { JwtPayload } from "jsonwebtoken";
+import { AppDataSource } from "../config/data-source";
+import { RefreshToken } from "../entity/RefreshToken";
+import { User } from "../entity/User";
+import { TokenService } from "../services/TokenService";
 export class AuthController {
     constructor(
         private userService: UserService,
         private logger: Logger,
+        private tokenService: TokenService,
     ) {}
 
     async register(req: RequestWithUser, res: Response, next: NextFunction) {
@@ -35,36 +36,26 @@ export class AuthController {
                 password,
             });
             this.logger.info("User has been registered", { id: user.id });
-            let privateKey: Buffer;
-            try {
-                privateKey = fs.readFileSync(
-                    path.join(__dirname, "../../certs/privateKey.pem"),
-                );
-            } catch (err) {
-                const error = createHttpError(
-                    500,
-                    "Error while reading private key",
-                );
-                next(error);
-                return;
-            }
             const payload: JwtPayload = {
                 sub: String(user.id),
                 role: user.role,
             };
-            const accessToken = sign(payload, privateKey, {
-                algorithm: "RS256",
-                expiresIn: "1h",
-                issuer: "auth-service",
+
+            const accessToken = this.tokenService.generateAccessToken(payload);
+
+            const MS_IN_HOUR = 1000 * 60 * 60 * 24 * 365; // One year in milliseconds
+            const refreshTokenRepository =
+                AppDataSource.getRepository(RefreshToken);
+
+            const newRefreshToken = await refreshTokenRepository.save({
+                user: user as unknown as User,
+                expiresAt: new Date(Date.now() + MS_IN_HOUR),
             });
 
-            // const refreshToken = "sdfsdfsdf";
-            const refreshToken = sign(payload, Config.REFRESH_TOKEN_SECRET!, {
-                algorithm: "HS256",
-                expiresIn: "1y",
-                issuer: "auth-service",
+            const refreshToken = this.tokenService.generateRefreshToken({
+                ...payload,
+                id: String(newRefreshToken.id),
             });
-
             res.cookie("accessToken", accessToken, {
                 domain: "localhost",
                 sameSite: "strict",
