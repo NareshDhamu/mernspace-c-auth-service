@@ -1,5 +1,4 @@
 import { NextFunction, Response } from "express";
-import { RequestWithUser } from "../types";
 import { UserService } from "../services/UserService";
 import { Logger } from "winston";
 import { validationResult } from "express-validator";
@@ -8,6 +7,7 @@ import { User } from "../entity/User";
 import { TokenService } from "../services/TokenService";
 import createHttpError from "http-errors";
 import { CredentialService } from "../services/CredentialService";
+import { AuthRequest, RequestWithUser } from "../types";
 export class AuthController {
     constructor(
         private userService: UserService,
@@ -138,24 +138,8 @@ export class AuthController {
             return;
         }
     }
+    async self(req: AuthRequest, res: Response) {
+        const user = await this.userService.findById(Number(req.auth.sub));
+        res.json(user);
+    }
 }
-
-// import { Response } from "express";
-// import { RequestWithUser } from "../types";
-// import { UserService } from "../services/UserService";
-
-// export class AuthController {
-//     constructor(private userService: UserService) {
-//         this.userService = userService;
-//     }
-//     async register(req: RequestWithUser, res: Response) {
-//         const { firstName, lastName, email, password } = req.body;
-//         const user = await this.userService.create({
-//             firstName,
-//             lastName,
-//             email,
-//             password,
-//         });
-//         res.status(201).json({ id: user.id });
-//     }
-// }

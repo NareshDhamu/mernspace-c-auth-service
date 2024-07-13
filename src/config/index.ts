@@ -14,6 +14,8 @@ const {
     DB_PASSWORD,
     DB_NAME,
     REFRESH_TOKEN_SECRET,
+    MONGO_URL,
+    JWKS_URL,
 } = process.env;
 export const Config = {
     PORT,
@@ -24,4 +26,6 @@ export const Config = {
     DB_PASSWORD,
     DB_NAME,
     REFRESH_TOKEN_SECRET,
+    MONGO_URL,
+    JWKS_URL,
 };

@@ -9,6 +9,9 @@ import { TokenService } from "../services/TokenService";
 import { RefreshToken } from "../entity/RefreshToken";
 import loginValidator from "../validators/login-validator";
 import { CredentialService } from "../services/CredentialService";
+import { AuthRequest } from "../types";
+import authenticate from "../middlewares/authenticate";
+// import authenticate from "../middlewares/authenticate";
 
 const router = express.Router();
 const userRepository = AppDataSource.getRepository(User);
@@ -34,6 +37,9 @@ router.post(
     loginValidator,
     (req: Request, res: Response, next: NextFunction) =>
         authController.login(req, res, next),
+);
+router.get("/self", authenticate, (req: Request, res: Response) =>
+    authController.self(req as AuthRequest, res),
 );
 
 export default router;
