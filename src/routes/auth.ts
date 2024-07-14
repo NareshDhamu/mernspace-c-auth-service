@@ -1,5 +1,4 @@
 import express, { NextFunction, Request, Response } from "express";
-import { AuthController } from "../controllers/AuthController";
 import { UserService } from "../services/UserService";
 import { AppDataSource } from "../config/data-source";
 import { User } from "../entity/User";
@@ -12,6 +11,8 @@ import { CredentialService } from "../services/CredentialService";
 import { AuthRequest } from "../types";
 import authenticate from "../middlewares/authenticate";
 import validareRefreshToken from "../middlewares/validareRefreshToken";
+import parseRefreshToken from "../middlewares/parseRefreshToken";
+import { AuthController } from "../controllers/authController";
 // import authenticate from "../middlewares/authenticate";
 
 const router = express.Router();
@@ -47,6 +48,13 @@ router.post(
     validareRefreshToken,
     (req: Request, res: Response, next: NextFunction) =>
         authController.refresh(req as AuthRequest, res, next),
+);
+router.post(
+    "/logout",
+    authenticate,
+    parseRefreshToken,
+    (req: Request, res: Response, next: NextFunction) =>
+        authController.logout(req as AuthRequest, res, next),
 );
 
 export default router;

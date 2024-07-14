@@ -12,7 +12,9 @@
         "prepare": "husky install",
         "test": "jest --watch --runInBand",
         "start": "ts-node src/index.ts",
-        "typeorm": "typeorm-ts-node-commonjs"
+        "migration:generate": "cross-env NODE_ENV=prod typeorm-ts-node-commonjs migration:generate",
+        "migration:run": "cross-env NODE_ENV=prod typeorm-ts-node-commonjs migration:run",
+        "migration:create": "cross-env NODE_ENV=prod typeorm-ts-node-commonjs migration:create"
     },
     "author": "Naresh Dhamu <nareshsuthar1229@gmail.com>",
     "license": "ISC",
