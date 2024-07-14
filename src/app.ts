@@ -14,7 +14,7 @@ app.get("/", async (req, res) => {
     res.send("Wellcome to Auth service Naresh Dhamu dhaneriya");
 });
 app.use("/auth", authRouter);
-app.use("tenants", tenantRouter);
+app.use("/tenants", tenantRouter);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: HttpError, req: Request, res: Response, next: NextFunction) => {
     logger.error(err.message);

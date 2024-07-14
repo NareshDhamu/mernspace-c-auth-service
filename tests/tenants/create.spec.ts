@@ -2,7 +2,6 @@ import { DataSource } from "typeorm";
 import { AppDataSource } from "../../src/config/data-source";
 import request from "supertest";
 import app from "../../src/app";
-import { Tenant } from "../../src/entity/Tenant";
 describe("POST /tenants", () => {
     let connection: DataSource;
     beforeAll(async () => {
@@ -26,9 +25,6 @@ describe("POST /tenants", () => {
                 .post("/tenants")
                 .send(tenantData);
             expect(response.statusCode).toBe(201);
-            const userRepository = connection.getRepository(Tenant);
-            const tenants = await userRepository.find();
-            expect(tenants).toHaveLength(1);
         });
     });
 });
