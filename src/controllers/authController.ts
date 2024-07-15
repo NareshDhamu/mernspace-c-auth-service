@@ -8,6 +8,7 @@ import { TokenService } from "../services/TokenService";
 import createHttpError from "http-errors";
 import { CredentialService } from "../services/CredentialService";
 import { AuthRequest, RequestWithUser } from "../types";
+import { Roles } from "../constants";
 export class AuthController {
     constructor(
         private userService: UserService,
@@ -35,6 +36,7 @@ export class AuthController {
                 lastName,
                 email,
                 password,
+                role: Roles.CUSTOMER,
             });
             this.logger.info("User has been registered", { id: user.id });
             const payload: JwtPayload = {
