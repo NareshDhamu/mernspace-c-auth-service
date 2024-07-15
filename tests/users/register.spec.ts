@@ -28,10 +28,10 @@ describe("POST /auth/register", () => {
         it("should return the 201 status code", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             // Act
             const response = await request(app)
@@ -45,10 +45,10 @@ describe("POST /auth/register", () => {
         it("should return valid json response", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             // Act
             const response = await request(app)
@@ -64,10 +64,10 @@ describe("POST /auth/register", () => {
         it("should persist the user in the database", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             // Act
             await request(app).post("/auth/register").send(userData);
@@ -84,10 +84,10 @@ describe("POST /auth/register", () => {
         it("should return an id of the created user", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             // Act
             const response = await request(app)
@@ -106,10 +106,10 @@ describe("POST /auth/register", () => {
         it("should assign a customer role", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             // Act
             await request(app).post("/auth/register").send(userData);
@@ -124,10 +124,10 @@ describe("POST /auth/register", () => {
         it("should store the hashed password in the database", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             // Act
             await request(app).post("/auth/register").send(userData);
@@ -143,10 +143,10 @@ describe("POST /auth/register", () => {
         it("should return 400 status code if email is already exists", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
             const userRepository = connection.getRepository(User);
             await userRepository.save({ ...userData, role: Roles.CUSTOMER });
@@ -165,10 +165,10 @@ describe("POST /auth/register", () => {
         it("should return the access token and refresh token inside a cookie", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
 
             // Act
@@ -202,10 +202,10 @@ describe("POST /auth/register", () => {
         it("should store the refresh token in the database", async () => {
             // Arrange
             const userData = {
-                firstName: "Rakesh",
-                lastName: "K",
-                email: "rakesh@mern.space",
-                password: "password",
+                firstName: "Naresh",
+                lastName: "Dhamu",
+                email: "nareshDhamu@gmail.com",
+                password: "naresh123",
             };
 
             // Act
