@@ -5,6 +5,8 @@ import createJWKSMock from "mock-jwks";
 import request from "supertest";
 import { Roles } from "../../src/constants";
 import { User } from "../../src/entity/User";
+import { Tenant } from "../../src/entity/Tenant";
+import { createTenant } from "../utils";
 
 describe("POST /users", () => {
     let connection: DataSource;
@@ -27,50 +29,61 @@ describe("POST /users", () => {
 
     describe("Given all fields", () => {
         it("should persist the user in the database", async () => {
+            const tenant = await createTenant(connection.getRepository(Tenant));
             const adminToken = jwks.token({
                 sub: "1",
                 role: Roles.ADMIN,
             });
+
+            // Register user
             const userData = {
                 firstName: "Naresh",
                 lastName: "Dhamu",
                 email: "nareshDhamu@gmail.com",
                 password: "naresh123",
-                tenantId: 1,
+                tenantId: tenant.id,
+                role: Roles.MANAGER,
             };
-            const userRepository = connection.getRepository(User);
-            await userRepository.save({
-                ...userData,
-                role: Roles.CUSTOMER,
-            });
 
+            // Add token to cookie
             await request(app)
                 .post("/users")
-                .set("Cookie", [`accessToken=${adminToken};`])
+                .set("Cookie", [`accessToken=${adminToken}`])
                 .send(userData);
+
+            const userRepository = connection.getRepository(User);
             const users = await userRepository.find();
+
             expect(users).toHaveLength(1);
             expect(users[0].email).toBe(userData.email);
         });
-        it("should creact a manager user", async () => {
+
+        it("should create a manager user", async () => {
+            const tenant = await createTenant(connection.getRepository(Tenant));
             const adminToken = jwks.token({
                 sub: "1",
                 role: Roles.ADMIN,
             });
+
+            // Register user
             const userData = {
                 firstName: "Naresh",
                 lastName: "Dhamu",
                 email: "nareshDhamu@gmail.com",
                 password: "naresh123",
-                tenantId: 1,
+                role: Roles.MANAGER,
+                tenantId: tenant.id,
             };
 
+            // Add token to cookie
             await request(app)
                 .post("/users")
-                .set("Cookie", [`accessToken=${adminToken};`])
+                .set("Cookie", [`accessToken=${adminToken}`])
                 .send(userData);
             const userRepository = connection.getRepository(User);
+            // console.log(response.body);
             const users = await userRepository.find();
+            // console.log(users);
             expect(users).toHaveLength(1);
             expect(users[0].role).toBe(Roles.MANAGER);
         });

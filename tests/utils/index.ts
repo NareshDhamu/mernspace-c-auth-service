@@ -1,5 +1,6 @@
 import { toString } from "express-validator/lib/utils";
-import { DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import { Tenant } from "../../src/entity/Tenant";
 
 export const truncateTables = async (connection: DataSource) => {
     const entities = connection.entityMetadatas;
@@ -24,3 +25,18 @@ export const isJwt = (token: string | null): boolean => {
         return false;
     }
 };
+
+export const createTenant = async (repository: Repository<Tenant>) => {
+    const tenant = repository.create({
+        name: "Test Tenant",
+        address: "Test Address",
+    });
+    return await repository.save(tenant);
+};
+// export const createTrnant = async (repository: Repository<Tenant>) => {
+//     const tenant = await repository.save({
+//         name: "Test Tenant",
+//         address: "Test Address",
+//     });
+//     return tenant;
+// };

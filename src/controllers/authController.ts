@@ -7,7 +7,7 @@ import { User } from "../entity/User";
 import { TokenService } from "../services/TokenService";
 import createHttpError from "http-errors";
 import { CredentialService } from "../services/CredentialService";
-import { AuthRequest, RequestWithUser } from "../types";
+import { AuthRequest, RegisterUserRequest } from "../types";
 import { Roles } from "../constants";
 export class AuthController {
     constructor(
@@ -17,7 +17,11 @@ export class AuthController {
         private credenttialService: CredentialService,
     ) {}
 
-    async register(req: RequestWithUser, res: Response, next: NextFunction) {
+    async register(
+        req: RegisterUserRequest,
+        res: Response,
+        next: NextFunction,
+    ) {
         const result = validationResult(req);
         if (!result.isEmpty()) {
             return res.status(400).json({ errors: result.array() });
@@ -72,7 +76,7 @@ export class AuthController {
             return;
         }
     }
-    async login(req: RequestWithUser, res: Response, next: NextFunction) {
+    async login(req: RegisterUserRequest, res: Response, next: NextFunction) {
         const result = validationResult(req);
         if (!result.isEmpty()) {
             return res.status(400).json({ errors: result.array() });
@@ -85,7 +89,7 @@ export class AuthController {
         });
 
         try {
-            const user = await this.userService.findbyEmail(email);
+            const user = await this.userService.findByEmailWithPassword(email);
             if (!user) {
                 const err = createHttpError(
                     400,

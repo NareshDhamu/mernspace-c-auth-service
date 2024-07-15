@@ -1,12 +1,19 @@
 import { Repository } from "typeorm";
 import { User } from "../entity/User";
-import { UserData } from "../types";
+import { LimitedUserData, UserData } from "../types";
 import createHttpError from "http-errors";
 import bcrytp from "bcrypt";
 
 export class UserService {
     constructor(private userRepository: Repository<User>) {}
-    async create({ firstName, lastName, email, password, role }: UserData) {
+    async create({
+        firstName,
+        lastName,
+        email,
+        password,
+        role,
+        tenantId,
+    }: UserData) {
         const user = await this.userRepository.findOne({
             where: { email: email },
         });
@@ -18,14 +25,15 @@ export class UserService {
         const saltRounds = 10;
         const hashedPassword = await bcrytp.hash(password, saltRounds);
         try {
-            const user = await this.userRepository.save({
+            const response = await this.userRepository.save({
                 firstName,
                 lastName,
                 email,
                 password: hashedPassword,
                 role,
+                tenant: tenantId ? { id: tenantId } : undefined,
             });
-            return { ...user, id: user.id.toString() };
+            return response;
         } catch (err) {
             const error = createHttpError(
                 500,
@@ -36,14 +44,50 @@ export class UserService {
         }
     }
 
-    async findbyEmail(email: string) {
+    async findByEmailWithPassword(email: string) {
         return await this.userRepository.findOne({
-            where: { email },
+            where: {
+                email,
+            },
+            select: [
+                "id",
+                "firstName",
+                "lastName",
+                "email",
+                "role",
+                "password",
+            ],
         });
     }
     async findById(id: number) {
         return await this.userRepository.findOne({
-            where: { id },
+            where: {
+                id,
+            },
         });
+    }
+    async update(
+        userId: number,
+        { firstName, lastName, role }: LimitedUserData,
+    ) {
+        try {
+            return await this.userRepository.update(userId, {
+                firstName,
+                lastName,
+                role,
+            });
+        } catch (err) {
+            const error = createHttpError(
+                500,
+                "Failed to update the user in the database",
+            );
+            throw error;
+        }
+    }
+    async getAll() {
+        return await this.userRepository.find();
+    }
+    async deleteById(userId: number) {
+        return await this.userRepository.delete(userId);
     }
 }
