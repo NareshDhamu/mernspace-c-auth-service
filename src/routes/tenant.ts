@@ -33,7 +33,9 @@ router.patch(
 );
 
 router.get("/", (req, res, next) => tenantController.getAll(req, res, next));
-router.get("/:id", (req, res, next) => tenantController.getOne(req, res, next));
+router.get("/:id", authenticate, (req, res, next) =>
+    tenantController.getOne(req, res, next),
+);
 router.delete(
     "/:id",
     authenticate,
