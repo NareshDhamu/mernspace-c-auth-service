@@ -18,6 +18,7 @@ const {
     REFRESH_TOKEN_SECRET,
     MONGO_URL,
     JWKS_URL,
+    PRIVATE_KEY,
 } = process.env;
 export const Config = {
     PORT,
@@ -30,4 +31,5 @@ export const Config = {
     REFRESH_TOKEN_SECRET,
     MONGO_URL,
     JWKS_URL,
+    PRIVATE_KEY,
 };
