@@ -1,8 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import { UserService } from "../services/UserService";
-import { CreateUserRequest, UpdateUserRequest } from "../types";
+import {
+    CreateUserRequest,
+    UpdateUserRequest,
+    UserQueryParams,
+} from "../types";
 import { Logger } from "winston";
-import { validationResult } from "express-validator";
+import { matchedData, validationResult } from "express-validator";
 import createHttpError from "http-errors";
 
 export class UserController {
@@ -27,7 +31,7 @@ export class UserController {
                 tenantId,
             });
 
-            res.status(201).json({ id: user.id });
+            res.status(201).json({ _id: user._id });
         } catch (err) {
             next(err);
         }
@@ -45,7 +49,7 @@ export class UserController {
         }
         this.logger.debug("Request to update a user", req.body);
         try {
-            await this.userService.update(Number(userId), {
+            await this.userService.update(userId, {
                 firstName,
                 lastName,
                 role,
@@ -57,14 +61,23 @@ export class UserController {
         }
     }
     async getAll(req: Request, res: Response, next: NextFunction) {
+        const validationQuery = matchedData(req, { onlyValidData: true });
         try {
-            const users = await this.userService.getAll();
-            this.logger.info("All users has been fetched");
-            res.json(users);
+            const { totalCount, data: users } = await this.userService.getAll(
+                validationQuery as UserQueryParams,
+            );
+            res.json({
+                page: (validationQuery as UserQueryParams).page,
+                limit: (validationQuery as UserQueryParams).limit,
+                fached: users.length,
+                total: totalCount,
+                users,
+            });
         } catch (err) {
             next(err);
         }
     }
+
     async getOne(req: Request, res: Response, next: NextFunction) {
         const userId = req.params.id;
         if (isNaN(Number(userId))) {
@@ -72,7 +85,7 @@ export class UserController {
             return;
         }
         try {
-            const user = await this.userService.findById(Number(userId));
+            const user = await this.userService.findById(userId);
             if (!user) {
                 next(createHttpError(404, "User does not exist."));
                 return;
@@ -90,7 +103,7 @@ export class UserController {
             return;
         }
         try {
-            await this.userService.deleteById(Number(userId));
+            await this.userService.deleteById(userId);
             this.logger.info("User has been deleted", { id: userId });
             res.json({ id: Number(userId) });
         } catch (err) {

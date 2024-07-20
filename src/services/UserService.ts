@@ -1,11 +1,11 @@
-import { Repository } from "typeorm";
-import { User } from "../entity/User";
-import { LimitedUserData, UserData } from "../types";
+import User, { IUser } from "../models/User";
+import { LimitedUserData, UserData, UserQueryParams } from "../types";
 import createHttpError from "http-errors";
-import bcrytp from "bcryptjs";
+import bcrypt from "bcryptjs";
 
 export class UserService {
-    constructor(private userRepository: Repository<User>) {}
+    constructor() {}
+
     async create({
         firstName,
         lastName,
@@ -14,80 +14,94 @@ export class UserService {
         role,
         tenantId,
     }: UserData) {
-        const user = await this.userRepository.findOne({
-            where: { email: email },
-        });
+        const user = await User.findOne({ email });
         if (user) {
-            const err = createHttpError(400, "User Email already exists!");
-            throw err;
+            throw createHttpError(400, "User Email already exists!");
         }
 
         const saltRounds = 10;
-        const hashedPassword = await bcrytp.hash(password, saltRounds);
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
         try {
-            const response = await this.userRepository.save({
+            const newUser = new User({
                 firstName,
                 lastName,
                 email,
                 password: hashedPassword,
                 role,
-                tenant: tenantId ? { id: tenantId } : undefined,
+                tenant: tenantId ? tenantId : undefined, // Assuming tenantId is a string
             });
+            const response = await newUser.save();
             return response;
         } catch (err) {
-            const error = createHttpError(
+            throw createHttpError(
                 500,
                 "Failed to store the user in the database",
             );
-
-            throw error;
         }
     }
 
     async findByEmailWithPassword(email: string) {
-        return await this.userRepository.findOne({
-            where: {
-                email,
-            },
-            select: [
-                "id",
-                "firstName",
-                "lastName",
-                "email",
-                "role",
-                "password",
-            ],
-        });
+        return await User.findOne({ email }).select(
+            "id firstName lastName email role password",
+        );
     }
-    async findById(id: number) {
-        return await this.userRepository.findOne({
-            where: {
-                id,
-            },
-        });
+
+    async findById(_id: string): Promise<IUser | null> {
+        return await User.findById(_id).populate("tenantId");
     }
+
     async update(
-        userId: number,
-        { firstName, lastName, role }: LimitedUserData,
+        userId: string, // User ID to update
+        { firstName, lastName, role, tenantId }: LimitedUserData,
     ) {
         try {
-            return await this.userRepository.update(userId, {
-                firstName,
-                lastName,
-                role,
-            });
+            return await User.findByIdAndUpdate(
+                userId,
+                {
+                    firstName,
+                    lastName,
+                    role,
+                    ...(tenantId && { tenantId }), // Assuming this is for tenant ID
+                },
+                { new: true },
+            );
         } catch (err) {
-            const error = createHttpError(
+            throw createHttpError(
                 500,
                 "Failed to update the user in the database",
             );
-            throw error;
         }
     }
-    async getAll() {
-        return await this.userRepository.find();
+
+    async updateTenantId(userId: string, tenantId: string) {
+        try {
+            return await User.findByIdAndUpdate(
+                userId,
+                { tenantId },
+                { new: true },
+            );
+        } catch (err) {
+            throw createHttpError(
+                500,
+                "Failed to update the user's tenant ID in the database",
+            );
+        }
     }
-    async deleteById(userId: number) {
-        return await this.userRepository.delete(userId);
+    async getAll(validationQuery: UserQueryParams) {
+        const totalCount = await User.countDocuments();
+
+        const data = await User.find()
+            .skip((validationQuery.page - 1) * validationQuery.limit)
+            .limit(validationQuery.limit);
+
+        return {
+            totalCount,
+            data,
+        };
+    }
+
+    async deleteById(userId: string) {
+        // Changed parameter type to string
+        return await User.findByIdAndDelete(userId);
     }
 }

@@ -1,20 +1,21 @@
 import { NextFunction, Response } from "express";
-import { UserService } from "../services/UserService";
-import { Logger } from "winston";
 import { validationResult } from "express-validator";
 import { JwtPayload } from "jsonwebtoken";
-import { User } from "../entity/User";
-import { TokenService } from "../services/TokenService";
 import createHttpError from "http-errors";
+import mongoose from "mongoose";
+import { UserService } from "../services/UserService";
+import { Logger } from "winston";
+import { TokenService } from "../services/TokenService";
 import { CredentialService } from "../services/CredentialService";
-import { AuthRequest, RegisterUserRequest } from "../types";
+import { AuthRequest, IError, RegisterUserRequest } from "../types";
 import { Roles } from "../constants";
+
 export class AuthController {
     constructor(
         private userService: UserService,
         private logger: Logger,
         private tokenService: TokenService,
-        private credenttialService: CredentialService,
+        private credentialService: CredentialService,
     ) {}
 
     async register(
@@ -28,7 +29,7 @@ export class AuthController {
         }
         const { firstName, lastName, email, password } = req.body;
 
-        this.logger.debug("New ewquest to register a user", {
+        this.logger.debug("New request to register a user", {
             firstName,
             lastName,
             email,
@@ -40,42 +41,41 @@ export class AuthController {
                 lastName,
                 email,
                 password,
-                role: Roles.CUSTOMER,
+                role: Roles.ADMIN,
             });
-            this.logger.info("User has been registered", { id: user.id });
+            this.logger.info("User has been registered", { _id: user._id });
             const payload: JwtPayload = {
-                sub: String(user.id),
+                _id: String(user._id),
                 role: user.role,
             };
 
             const accessToken = this.tokenService.generateAccessToken(payload);
-
-            const newRefreshToken = await this.tokenService.persistRefreshToken(
-                user as unknown as User,
-            );
-
+            const newRefreshToken =
+                await this.tokenService.persistRefreshToken(user);
             const refreshToken = this.tokenService.generateRefreshToken({
                 ...payload,
-                id: String(newRefreshToken.id),
+                refreshTokenId: String(newRefreshToken.refreshTokenId),
             });
+
             res.cookie("accessToken", accessToken, {
                 domain: "localhost",
                 sameSite: "strict",
-                maxAge: 1000 * 60 * 60, //1h
-                httpOnly: true, // Very important
+                maxAge: 1000 * 60 * 60, // 1h
+                httpOnly: true,
             });
             res.cookie("refreshToken", refreshToken, {
                 domain: "localhost",
                 sameSite: "strict",
-                maxAge: 1000 * 60 * 60 * 24 * 365, //1y
-                httpOnly: true, // Very important
+                maxAge: 1000 * 60 * 60 * 24 * 365, // 1y
+                httpOnly: true,
             });
-            res.status(201).json({ id: user.id });
+
+            res.status(201).json({ _id: user._id });
         } catch (err) {
             next(err);
-            return;
         }
     }
+
     async login(req: RegisterUserRequest, res: Response, next: NextFunction) {
         const result = validationResult(req);
         if (!result.isEmpty()) {
@@ -83,7 +83,7 @@ export class AuthController {
         }
         const { email, password } = req.body;
 
-        this.logger.debug("New ewquest to login a register a user", {
+        this.logger.debug("New request to login a user", {
             email,
             password: "********",
         });
@@ -95,117 +95,158 @@ export class AuthController {
                     400,
                     "Email or password does not match",
                 );
-                next(err);
-                return;
+                return next(err);
             }
 
-            const passwordMatch = await this.credenttialService.comparePassword(
+            const passwordMatch = await this.credentialService.comparePassword(
                 password,
                 user.password,
             );
 
             if (!passwordMatch) {
-                const err = createHttpError(400, "Password not match");
-                next(err);
-                return;
+                const err = createHttpError(400, "Password does not match");
+                return next(err);
             }
             const payload: JwtPayload = {
-                sub: String(user.id),
+                _id: user._id.toString(),
                 role: user.role,
             };
 
             const accessToken = this.tokenService.generateAccessToken(payload);
-
             const newRefreshToken =
                 await this.tokenService.persistRefreshToken(user);
-
             const refreshToken = this.tokenService.generateRefreshToken({
                 ...payload,
-                id: String(newRefreshToken.id),
+                refreshTokenId: newRefreshToken.refreshTokenId,
             });
+
             res.cookie("accessToken", accessToken, {
                 domain: "localhost",
                 sameSite: "strict",
-                maxAge: 1000 * 60 * 60, //1h
-                httpOnly: true, // Very important
+                maxAge: 1000 * 60 * 60, // 1h
+                httpOnly: true,
             });
             res.cookie("refreshToken", refreshToken, {
                 domain: "localhost",
                 sameSite: "strict",
-                maxAge: 1000 * 60 * 60 * 24 * 365, //1y
-                httpOnly: true, // Very important
+                maxAge: 1000 * 60 * 60 * 24 * 365, // 1y
+                httpOnly: true,
             });
 
-            this.logger.info("User has been logged in", { id: user.id });
-            res.status(200).json({ id: user.id });
+            this.logger.info("User has been logged in", { _id: user._id });
+            res.status(200).json({ _id: user._id });
         } catch (err) {
             next(err);
-            return;
         }
     }
-    async self(req: AuthRequest, res: Response) {
-        const user = await this.userService.findById(Number(req.auth.sub));
 
-        res.json({ ...user, password: undefined });
+    async self(req: AuthRequest, res: Response) {
+        try {
+            const userId = req.auth._id;
+
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                throw createHttpError(400, "Invalid user ID format");
+            }
+
+            const user = await this.userService.findById(userId);
+
+            if (!user) {
+                throw createHttpError(404, "User not found");
+            }
+
+            res.json({ ...user.toObject(), password: undefined });
+        } catch (err) {
+            const error = err as IError;
+
+            res.status(error.status || 500).json({
+                message: error.message,
+            });
+        }
     }
+
     async refresh(req: AuthRequest, res: Response, next: NextFunction) {
+        // Extract the payload from the request authentication
         const payload: JwtPayload = {
-            sub: req.auth.sub,
+            _id: req.auth._id,
             role: req.auth.role,
         };
 
         try {
+            // Generate new access token
             const accessToken = this.tokenService.generateAccessToken(payload);
-            const user = await this.userService.findById(Number(req.auth.sub));
+
+            // Find user by ID
+            const user = await this.userService.findById(req.auth._id);
             if (!user) {
-                const err = createHttpError(
+                throw createHttpError(
                     400,
-                    "User with the token could not find",
+                    "User with the token could not be found",
                 );
-                next(err);
-                return;
             }
 
+            // Persist new refresh token
             const newRefreshToken =
                 await this.tokenService.persistRefreshToken(user);
-            await this.tokenService.deleteRefreshToken(Number(req.auth.id));
+
+            // Delete old refresh token
+            const oldRefreshTokenId = req.auth.refreshTokenId;
+            if (oldRefreshTokenId) {
+                await this.tokenService.deleteRefreshToken(oldRefreshTokenId);
+            } else {
+                throw createHttpError(400, "No refresh token ID found");
+            }
+
+            // Generate new refresh token
             const refreshToken = this.tokenService.generateRefreshToken({
                 ...payload,
-                id: String(newRefreshToken.id),
+                refreshTokenId: String(newRefreshToken.refreshTokenId), // Ensure you're using the correct property
             });
+
+            // Set cookies
             res.cookie("accessToken", accessToken, {
-                domain: "localhost",
+                domain: "localhost", // Adjust for production
                 sameSite: "strict",
-                maxAge: 1000 * 60 * 60, //1h
-                httpOnly: true, // Very important
+                maxAge: 1000 * 60 * 60, // 1h
+                httpOnly: true,
             });
             res.cookie("refreshToken", refreshToken, {
-                domain: "localhost",
+                domain: "localhost", // Adjust for production
                 sameSite: "strict",
-                maxAge: 1000 * 60 * 60 * 24 * 365, //1y
-                httpOnly: true, // Very important
+                maxAge: 1000 * 60 * 60 * 24 * 365, // 1y
+                httpOnly: true,
             });
 
-            this.logger.info("User has been logged in", { id: user.id });
-
-            res.json({ id: user.id });
+            this.logger.info("User has been re-authenticated", {
+                _id: user._id,
+            });
+            res.json({ _id: user._id });
         } catch (err) {
             next(err);
         }
     }
+
     async logout(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            await this.tokenService.deleteRefreshToken(Number(req.auth.id));
+            await this.tokenService.deleteRefreshToken(
+                String(req.auth.refreshTokenId),
+            );
             this.logger.info("Refresh token has been deleted", {
-                id: req.auth.id,
+                refreshTokenId: req.auth.refreshTokenId,
             });
-            this.logger.info("User has been logged out", { id: req.auth.sub });
-            res.clearCookie("accessToken");
-            res.clearCookie("refreshToken");
-            res.json({});
+            this.logger.info("User has been logged out", { _id: req.auth._id });
+            res.clearCookie("accessToken", {
+                domain: "localhost",
+                sameSite: "strict",
+                httpOnly: true,
+            });
+            res.clearCookie("refreshToken", {
+                domain: "localhost",
+                sameSite: "strict",
+                httpOnly: true,
+            });
+            res.status(200).json({ message: "Logged out successfully" });
         } catch (err) {
             next(err);
-            return;
         }
     }
 }

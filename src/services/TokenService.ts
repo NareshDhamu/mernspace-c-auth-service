@@ -1,55 +1,67 @@
 import { JwtPayload, sign } from "jsonwebtoken";
 import createHttpError from "http-errors";
 import { Config } from "../config";
-import { RefreshToken } from "../entity/RefreshToken";
-import { User } from "../entity/User";
-import { Repository } from "typeorm";
+import RefreshToken, { IRefreshTokenPayload } from "../models/RefreshToken";
+import { IUser } from "../models/User";
+import { Types } from "mongoose";
 
 export class TokenService {
-    constructor(private refreshTokenRepository: Repository<RefreshToken>) {}
-    generateAccessToken = (payload: JwtPayload) => {
-        let privateKey: string;
-        if (!Config.PRIVATE_KEY) {
-            const error = createHttpError(500, "SECRET_KEY is not set");
-            throw error;
+    constructor() {}
+
+    generateAccessToken(payload: JwtPayload): string {
+        const privateKey = Config.PRIVATE_KEY;
+
+        if (!privateKey) {
+            throw createHttpError(500, "PRIVATE_KEY is not set");
         }
-        try {
-            privateKey = Config.PRIVATE_KEY;
-        } catch (err) {
-            const error = createHttpError(
-                500,
-                "Error while reading private key",
-            );
-            throw error;
-        }
+
         const accessToken = sign(payload, privateKey, {
             algorithm: "RS256",
             expiresIn: "1h",
             issuer: "auth-service",
         });
+
         return accessToken;
-    };
-    generateRefreshToken(payload: JwtPayload) {
-        const refreshToken = sign(payload, Config.REFRESH_TOKEN_SECRET!, {
+    }
+
+    generateRefreshToken(payload: JwtPayload): string {
+        const refreshTokenSecret = Config.REFRESH_TOKEN_SECRET;
+
+        if (!refreshTokenSecret) {
+            throw createHttpError(500, "REFRESH_TOKEN_SECRET is not set");
+        }
+
+        const refreshToken = sign(payload, refreshTokenSecret, {
             algorithm: "HS256",
             expiresIn: "1y",
             issuer: "auth-service",
-            jwtid: String(payload.id),
+            jwtid: payload.sub?.toString() || "",
         });
 
         return refreshToken;
     }
 
-    async persistRefreshToken(user: User) {
-        const MS_IN_HOUR = 1000 * 60 * 60 * 24 * 365; // One year in milliseconds
+    async persistRefreshToken(user: IUser): Promise<IRefreshTokenPayload> {
+        const MS_IN_YEAR = 1000 * 60 * 60 * 24 * 365;
 
-        const newRefreshToken = await this.refreshTokenRepository.save({
-            user: user,
-            expiresAt: new Date(Date.now() + MS_IN_HOUR),
+        const newRefreshToken = new RefreshToken({
+            user: user._id,
+            expiresAt: new Date(Date.now() + MS_IN_YEAR),
         });
-        return newRefreshToken;
+
+        await newRefreshToken.save();
+
+        const refreshTokenId = (
+            newRefreshToken._id as Types.ObjectId
+        ).toString();
+
+        return {
+            refreshTokenId,
+            userId: user._id.toString(),
+        };
     }
-    async deleteRefreshToken(tokenId: number) {
-        return await this.refreshTokenRepository.delete({ id: tokenId });
+
+    async deleteRefreshToken(tokenId: string): Promise<void> {
+        await RefreshToken.deleteOne({ _id: tokenId });
     }
 }

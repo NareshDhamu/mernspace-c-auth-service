@@ -1,27 +1,34 @@
-import { Repository } from "typeorm";
-import { ITenant } from "../types";
-import { Tenant } from "../entity/Tenant";
+import createHttpError from "http-errors";
+import Tenant, { ITenant } from "../models/Tenant"; // Adjust the path as needed
 
 export class TenantService {
-    constructor(private tenantRepository: Repository<Tenant>) {}
-
-    async create(tenantData: ITenant) {
-        return await this.tenantRepository.save(tenantData);
+    async create(tenantData: {
+        name: string;
+        address: string;
+        userId: string;
+    }): Promise<ITenant> {
+        try {
+            const tenant = new Tenant(tenantData);
+            await tenant.save();
+            return tenant;
+        } catch (err) {
+            throw createHttpError(500, "Failed to create tenant");
+        }
     }
 
-    async update(id: number, tenantData: ITenant) {
-        return await this.tenantRepository.update(id, tenantData);
+    async update(id: string, tenantData: Partial<ITenant>) {
+        return await Tenant.findByIdAndUpdate(id, tenantData, { new: true });
     }
 
     async getAll() {
-        return await this.tenantRepository.find();
+        return await Tenant.find();
     }
 
-    async getById(tenantId: number) {
-        return await this.tenantRepository.findOne({ where: { id: tenantId } });
+    async getById(tenantId: string) {
+        return await Tenant.findById(tenantId);
     }
 
-    async deleteById(tenantId: number) {
-        return await this.tenantRepository.delete(tenantId);
+    async deleteById(tenantId: string) {
+        return await Tenant.findByIdAndDelete(tenantId);
     }
 }

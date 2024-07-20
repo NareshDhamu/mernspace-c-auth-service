@@ -1,24 +1,20 @@
+// main.ts or index.ts (your main application file)
+import connectDB from "./db/dbconnect";
 import app from "./app";
-import { Config } from "./config";
-import { AppDataSource } from "./config/data-source";
 import logger from "./config/logger";
+import { Config } from "./config";
+
 const startServer = async () => {
     const PORT = Config.PORT;
-    try {
-        await AppDataSource.initialize();
-        logger.info("Database connected successfully");
-        app.listen(PORT, () => {
-            // eslint-disable-next-line no-console
-            logger.info(`Server running on port ${PORT}`);
-        });
-    } catch (err: unknown) {
-        if (err instanceof Error) {
-            logger.error(err.message);
-            setTimeout(() => {
-                process.exit(1);
-            }, 1000);
-        }
-    }
+
+    // Initialize the MongoDB connection
+    await connectDB();
+
+    // Start the server
+    app.listen(PORT, () => {
+        logger.info(`Server running on port ${PORT}`);
+    });
 };
 
+// Start the server
 void startServer();

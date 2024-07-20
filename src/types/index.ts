@@ -1,5 +1,6 @@
 import { Request } from "express";
 
+// User-related interfaces
 export interface UserData {
     firstName: string;
     lastName: string;
@@ -8,27 +9,53 @@ export interface UserData {
     role: string;
     tenantId?: number;
 }
+
+export interface LimitedUserData {
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    tenantId?: string;
+}
+
 export interface RegisterUserRequest extends Request {
     body: UserData;
 }
 
 export interface AuthRequest extends Request {
     auth: {
-        sub: string;
+        _id: string;
         role: string;
-        id?: string;
+        refreshTokenId: string;
+    };
+}
+export interface AuthReq extends Request {
+    auth?: {
+        _id: string;
+        role: string;
+        refreshTokenId: string;
+    };
+    user?: {
+        _id: string;
     };
 }
 
+export interface UpdateUserRequest extends Request {
+    body: LimitedUserData;
+}
+
+// Token-related interfaces
 export type AuthCookie = {
     accessToken: string;
     refreshToken: string;
 };
 
 export interface IRefreshTokenPayload {
-    id: string;
+    _id: string;
+    userId: string; // Ensure this matches your actual payload
+    refreshTokenId: string; // Ensure this matches your actual payload
 }
 
+// Tenant-related interfaces
 export interface ITenant {
     name: string;
     address: string;
@@ -42,12 +69,19 @@ export interface CreateUserRequest extends Request {
     body: UserData;
 }
 
-export interface LimitedUserData {
-    firstName: string;
-    lastName: string;
-    role: string;
+export interface IError {
+    status: number;
+    message: string;
 }
 
-export interface UpdateUserRequest extends Request {
-    body: LimitedUserData;
+// src/types/index.ts
+
+export interface IRefreshTokenPayload {
+    _id: string; // User ID or token ID
+    refreshTokenId: string; // User identifier, can be user ID or any
+}
+
+export interface UserQueryParams {
+    page: number;
+    limit: number;
 }

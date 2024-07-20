@@ -20,6 +20,7 @@ const {
     JWKS_URL,
     PRIVATE_KEY,
     SECRET_KEY,
+    MONGO_URI,
 } = process.env;
 export const Config = {
     PORT,
@@ -34,4 +35,5 @@ export const Config = {
     JWKS_URL,
     PRIVATE_KEY,
     SECRET_KEY,
+    MONGO_URI,
 };
