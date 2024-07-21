@@ -63,15 +63,15 @@ export class UserController {
     async getAll(req: Request, res: Response, next: NextFunction) {
         const validationQuery = matchedData(req, { onlyValidData: true });
         try {
-            const { totalCount, data: users } = await this.userService.getAll(
+            const { totalCount, data } = await this.userService.getAll(
                 validationQuery as UserQueryParams,
             );
             res.json({
                 page: (validationQuery as UserQueryParams).page,
                 limit: (validationQuery as UserQueryParams).limit,
-                fached: users.length,
+                fached: data.length,
                 total: totalCount,
-                users,
+                data,
             });
         } catch (err) {
             next(err);
